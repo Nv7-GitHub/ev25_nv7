@@ -18,17 +18,11 @@ void waitForStart() {
   resetLocalization();
 }
 
-long lastPrint = 0;
 void loop() {
-  loopLocalization();
-
-  if (millis() - lastPrint > 50) {
-    Serial.print("gyro:");
-    Serial.print(readGyro()*RAD_TO_DEG);
-    Serial.print(",angleL:");
-    Serial.print(readAngleL());
-    Serial.print(",angleR:");
-    Serial.println(readAngleR());
-    lastPrint = millis();
+  waitForStart();
+  bool done = false;
+  while (!done) {
+    loopLocalization();
+    done = loopControl();
   }
 }
