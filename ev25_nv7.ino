@@ -3,22 +3,24 @@ void setup() {
   setupSensing();
 }
 
+void waitForStart() {
+  // Wait for button to get pressed
+  while (!GOPressed()) {
+    
+    motorWriteL(0.0);
+    motorWriteR(0.0);
+    printResults();
+    delay(50);
+  }
+  while (GOPressed()) {
+    LEDWrite(0, 1, 0);
+  }
+  resetLocalization();
+}
 
 long lastPrint = 0;
 void loop() {
-  if (STOPPressed()) {
-    LEDWrite(1, 0, 0);
-    motorWriteL(0.0);
-    motorWriteR(0.2);
-  } else if (GOPressed()) {
-    LEDWrite(0, 1, 0);
-    motorWriteL(0.2);
-    motorWriteR(0.0);
-  } else {
-    LEDWrite(0.1, 0.1, 0.1);
-    motorWriteL(0.0);
-    motorWriteR(0.0);
-  }
+  loopLocalization();
 
   if (millis() - lastPrint > 50) {
     Serial.print("gyro:");
