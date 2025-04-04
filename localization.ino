@@ -1,10 +1,13 @@
 // CONFIGURE THESE
 const float distTarget = 7;
-float distAxial = 0; // If it goes too far, increase this
-float distLateral = 0; // If it goes left normally, make this positive
 float theta = 0;
+const float initialDistAxial = 0; // If it goes too far, increase this
+const float initialDistLateral = 0; // If it goes left normally, make this positive
 
 // Variables for localization & analysis
+float distAxial = 0; 
+float distLateral = 0; 
+
 float prevLeft = 0;
 float prevRight = 0;
 unsigned long prevTime = 0;
@@ -34,6 +37,18 @@ void loopLocalization() {
   // Encoder-based angle calculation
   float dTheta = (deltaR - deltaL)/trackWidth * mPerDeg;
   omega = dTheta/dT;
+  /*if (omega > 0.3) {
+    Serial.print("dT:");
+    Serial.print(dT, 10);
+    Serial.print(",dL:");
+    Serial.print(deltaL, 5);
+    Serial.print(",dR:");
+    Serial.print(deltaR, 5);
+    Serial.print(",dTheta:");
+    Serial.print(dTheta, 10);
+    Serial.print(",omega:");
+    Serial.println(omega);
+  }*/
 
   // IMU-based angle calculation
   //omega = readGyro();
@@ -55,6 +70,10 @@ void loopLocalization() {
   distAxial += distAvg * cos(theta);
   distLateral += distAvg * sin(theta);
   vel = distAvg/dT;
+
+  // Fix deltas
+  prevLeft = left;
+  prevRight = right;
 }
 
 float axialDist() {
@@ -92,10 +111,17 @@ float normalizeDelta(float delta) {
 }
 
 void resetLocalization() {
-  prevLeft = readAngleL();
-  prevRight = readAngleR();
   start = millis();
   prevTime = micros();
+  theta = 0;
+  distAxial = initialDistAxial;
+  distLateral = initialDistLateral;
+  loopCnt = 0;
+  for (int i = 0; i < 5; i++) {
+    prevLeft = readAngleL();
+    prevRight = readAngleR();
+    delay(1);
+  }
 }
 
 void done() {
@@ -107,19 +133,31 @@ float getTime() {
 }
 
 void printResults() {
-  if (!Serial || (start - doneTime) == 0) {
+  if ((start - doneTime) == 0) {
     LEDWrite(0.05, 0.05, 0.05); // Faint white: turned on
+    if (!Serial) {
+      return;
+    }
+    Serial.print("Battery Voltage: ");
+    Serial.print(batteryVoltage());
+    Serial.println("V");
     return;
   }
   LEDWrite(0.0, 0.1, 0.1); // Faint purple: finished with a run
+  if (!Serial) {
+    return;
+  }
 
   Serial.print("Done! axialDist:");
-  Serial.print(distAxial);
+  Serial.print(distAxial, 4);
   Serial.print(",lateralDist:");
-  Serial.print(distLateral);
+  Serial.print(distLateral, 4);
   Serial.print(",time:");
   float time = ((float)doneTime)/1000.0f;
-  Serial.print(time);
+  Serial.print(time, 3);
   Serial.print(",loopRate:");
-  Serial.println(((float)loopCnt)/time);
+  Serial.print(((float)loopCnt)/time, 0);
+  Serial.print(",batteryVoltage:");
+  Serial.print(batteryVoltage(), 1);
+  Serial.println("V");
 }

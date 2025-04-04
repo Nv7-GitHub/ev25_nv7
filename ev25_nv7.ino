@@ -6,10 +6,13 @@ void setup() {
 void waitForStart() {
   // Wait for button to get pressed
   while (!GOPressed()) {
-    
+    if (STOPPressed()) {
+      LEDWrite(1, 0, 0);
+    } else {
+      printResults();
+    }
     motorWriteL(0.0);
     motorWriteR(0.0);
-    printResults();
     delay(50);
   }
   while (GOPressed()) {
@@ -20,9 +23,13 @@ void waitForStart() {
 
 void loop() {
   waitForStart();
-  bool done = false;
-  while (!done) {
+  bool end = false;
+  while (!end) {
     loopLocalization();
-    done = loopControl();
+    end = loopControl();
+    if (STOPPressed()) {
+      done();
+      end = true;
+    }
   }
 }

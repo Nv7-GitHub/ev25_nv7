@@ -1,25 +1,32 @@
-const float P_forward = 0.8;
+const float P_forward = 1.5;
 const float P_difference = 2.0;
-const float D = 0.15;
+const float D = 0.06;
+const float D_forward = 0.15;
 const float maxSpeed = 1.0;
+const float accelTime = 0.3;
 float filteredOmega = 0;
 
 long lastPrint = 0;
 
 bool loopControl() {
   float distRem = targetDist() - axialDist();
-  if (abs(distRem) < 0.003 && linVel() < 0.1) { // 0.3cm
+  if (abs(distRem) < 0.003 && linVel() < 0.01) { // 0.3cm
     done();
     return true;
   }
 
   // Forward PID controller
-  float pow;
+  float pow = P_forward * distRem;
   if (abs(distRem) > 0.02) { // 2 cm
     pow = P_forward * distRem;
   } else {
-    pow = P_forward * 3 * distRem; // When within 2cm of the end, use a stronger P controller
+    pow = P_forward * distRem; // When within 2cm of the end, use a stronger P controller
+    float mult = sqrt(0.003/min(distRem, 0.003)); // Make P proportional to distance from end, with sqrt to make it stronger but less jerky when super close
+    pow *= mult*4 + 1;
   }
+
+  // D term
+  pow -= D_forward*linVel();
 
   // Friction compensation (aka feedforward)
   if (pow > 0) {
@@ -29,21 +36,21 @@ bool loopControl() {
   }
 
   // Make sure it follows max speed
-  bool maxSpeed = false;
+  bool atMax = false;
   if (pow > maxSpeed) {
     pow = maxSpeed;
-    maxSpeed = true;
+    atMax = true;
   } else if (pow < -maxSpeed) {
     pow = -maxSpeed;
-    maxSpeed = true;
+    atMax = true;
   }
 
-  // Accel curve for 500ms
-  float prog = min(getTime()/0.5, 1.0);
+  // Accel curve
+  float prog = min(getTime()/accelTime, 1.0);
   pow *= prog;
-  if (getTime() < 0.5) {
+  if (getTime() < accelTime) {
     LEDWrite(prog, prog, 0); // Accel phase: yellow
-  } else if (maxSpeed) {
+  } else if (atMax) {
     LEDWrite(1, 0, 1); // Full speed phase: pink
   } else {
     LEDWrite(0, 0, 1); // Decel phase: blue
@@ -86,15 +93,19 @@ bool loopControl() {
     Serial.print("time:");
     Serial.print(getTime());
     Serial.print(",axialDist:");
-    Serial.print(axialDist());
+    Serial.print(axialDist(), 4);
     Serial.print(",lateralDist:");
-    Serial.print(lateralDist());
+    Serial.print(lateralDist(), 4);
     Serial.print(",angVel:");
     Serial.print(angVel());
     Serial.print(",powL:");
     Serial.print(powL);
     Serial.print(",powR:");
-    Serial.println(powL);
+    Serial.print(powR);
+    Serial.print(",ang:");
+    Serial.print(ang * RAD_TO_DEG);
+    Serial.print(",vel:");
+    Serial.println(linVel());
     lastPrint = millis();
   }
 
