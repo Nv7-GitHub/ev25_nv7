@@ -1,8 +1,24 @@
 // CONFIGURE THESE
-const float distTarget = 7;
+const float distTarget = 10 - 0.034; // 0.034 is distance from MP to center
 float theta = 0;
-const float initialDistAxial = 0; // If it goes too far, increase this
-const float initialDistLateral = 0; // If it goes left normally, make this positive
+const float initialDistAxial = 0.01; // If it goes too far, increase this
+const float initialDistLateral = -0.115; // If it goes left normally, make this positive
+
+/* Calibration
+// ALWAYS TAKE THE ERROR, DIVIDE BY TWO, AND ROUND DOWN
+
+7m: 
+initialDistAxial: -0.01
+initialDistLateral: -0.132
+
+8.5m:
+initialDistAxial: -0.00
+initialDistLateral: -0.147
+
+10m:
+initialDistAxial: 0.01
+initialDistLateral: -0.115
+*/
 
 // Variables for localization & analysis
 float distAxial = 0; 
@@ -35,8 +51,8 @@ void loopLocalization() {
   float dT = (micros() - prevTime)/1000000.0f;
 
   // Encoder-based angle calculation
-  float dTheta = (deltaR - deltaL)/trackWidth * mPerDeg;
-  omega = dTheta/dT;
+  //float dTheta = (deltaR - deltaL)/trackWidth * mPerDeg;
+  //omega = dTheta/dT;
   /*if (omega > 0.3) {
     Serial.print("dT:");
     Serial.print(dT, 10);
@@ -51,8 +67,8 @@ void loopLocalization() {
   }*/
 
   // IMU-based angle calculation
-  //omega = readGyro();
-  //float dTheta = dT * omega;
+  omega = readGyro();
+  float dTheta = dT * omega;
 
   prevTime = micros();
   theta += dTheta;
@@ -81,7 +97,8 @@ float axialDist() {
 }
 
 float lateralDist() {
-  return distLateral;
+  // Apply initialDistLateral over the course of the first 25% of the run, to avoid slipping due to a sharp turn
+  return min((distAxial/distTarget)*4.0f, 1)*initialDistLateral + distLateral;
 }
 
 float angVel() {
@@ -115,7 +132,7 @@ void resetLocalization() {
   prevTime = micros();
   theta = 0;
   distAxial = initialDistAxial;
-  distLateral = initialDistLateral;
+  distLateral = 0;
   loopCnt = 0;
   for (int i = 0; i < 5; i++) {
     prevLeft = readAngleL();
@@ -149,9 +166,9 @@ void printResults() {
   }
 
   Serial.print("Done! axialDist:");
-  Serial.print(distAxial, 4);
+  Serial.print(axialDist(), 4);
   Serial.print(",lateralDist:");
-  Serial.print(distLateral, 4);
+  Serial.print(lateralDist(), 4);
   Serial.print(",time:");
   float time = ((float)doneTime)/1000.0f;
   Serial.print(time, 3);

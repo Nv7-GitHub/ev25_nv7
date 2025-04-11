@@ -1,11 +1,11 @@
-#define LED_R 11
-#define LED_G 12
-#define LED_B 10
+#define LED_R 10
+#define LED_G 11
+#define LED_B 9
 
-#define DIR_R 5
-#define PWM_R 6
-#define DIR_L 8
-#define PWM_L 9
+#define DIR_R 4
+#define PWM_R 5
+#define DIR_L 7
+#define PWM_L 8
 
 #define GO 0
 #define STOP 1

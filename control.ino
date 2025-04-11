@@ -1,9 +1,10 @@
-const float P_forward = 1.5;
-const float P_difference = 2.0;
+const float P_forward = 1.7;
+const float P_difference = 2;
 const float D = 0.06;
 const float D_forward = 0.15;
+const float P_lateral = 0.2;
 const float maxSpeed = 1.0;
-const float accelTime = 0.3;
+const float accelTime = 0.5;
 float filteredOmega = 0;
 
 long lastPrint = 0;
@@ -21,8 +22,8 @@ bool loopControl() {
     pow = P_forward * distRem;
   } else {
     pow = P_forward * distRem; // When within 2cm of the end, use a stronger P controller
-    float mult = sqrt(0.003/min(distRem, 0.003)); // Make P proportional to distance from end, with sqrt to make it stronger but less jerky when super close
-    pow *= mult*4 + 1;
+    float mult = min(sqrt(0.015/min(distRem, 0.015)), 4); // Make P proportional to distance from end, with sqrt to make it stronger but less jerky when super close, 0.003 is 0.3cm from end
+    pow *= mult;
   }
 
   // D term
@@ -57,17 +58,18 @@ bool loopControl() {
   }
 
   // Calculate target angle
-  float ang;
-  if (distRem > 0.4) {
-    ang = heading() - atan2(0-lateralDist(), distRem);
-  } else {
-    ang = heading();
-  }
+  float ang = heading();
 
   // Calculate W (angular control output)
   float w = ang * P_difference;
   filteredOmega = filteredOmega * 0.3 + angVel() * 0.7; // Low-pass filter the ang. vel.
   w += filteredOmega * D;
+
+  if (lateralDist() >= 0) {
+    w += sqrt(P_lateral*lateralDist())*prog;
+  } else {
+    w -= sqrt(P_lateral*-lateralDist())*prog;
+  }
 
   // Apply W
   float powL = pow + w;
@@ -89,7 +91,7 @@ bool loopControl() {
   motorWriteR(powR);
 
   // Debugging
-  if (millis() - lastPrint > 50) {
+  /*if (millis() - lastPrint > 50) {
     Serial.print("time:");
     Serial.print(getTime());
     Serial.print(",axialDist:");
@@ -107,7 +109,10 @@ bool loopControl() {
     Serial.print(",vel:");
     Serial.println(linVel());
     lastPrint = millis();
-  }
+  }*/
+
+  // Loop timing - goal: 1khz
+  delayMicroseconds(870);
 
   return false;
 }
