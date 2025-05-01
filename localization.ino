@@ -1,15 +1,16 @@
 // CONFIGURE THESE
-const float distTarget = 8.5 - 0.034; // 0.034 is distance from MP to center
+const float distTarget = 10.0 - 0.034; // 0.034 is distance from MP to center
 float theta = 0;
 const float initialDistAxial = 0; // If it goes too far, increase this
-const float initialDistLateral = 0.2; // If it goes left normally, make this positive
+const float initialDistLateral = -0.055; // If it goes left normally, make this positive
 
 /* Calibration
 // ALWAYS TAKE THE ERROR, DIVIDE BY TWO, AND ROUND DOWN
 
 7m: 
 initialDistAxial: 0.00
-initialDistLateral: 0.170
+initialDistLateral (home): 0.170
+initialDistLateral (comp): 0.00
 
 8.5m:
 initialDistAxial: 0
@@ -18,6 +19,7 @@ initialDistLateral: 0.2
 10m:
 initialDistAxial: 0.01
 initialDistLateral: 0.29
+initialDistLateral (comp): 0.06
 */
 
 // Variables for localization & analysis
@@ -139,6 +141,7 @@ void resetLocalization() {
     prevRight = readAngleR();
     delay(1);
   }
+  resetControl();
 }
 
 void done() {

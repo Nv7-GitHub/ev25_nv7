@@ -1,13 +1,22 @@
-const float P_forward = 1.7;
+const float P_forward = 1.25;
 const float P_difference = 2;
-const float D = 0.06;
-const float D_forward = 0.15;
-const float P_lateral = 0.2;
+const float D = 0.1;
+const float D_forward = 0.17;
+const float P_lateral = 0.1;
 const float maxSpeed = 1.0;
 const float accelTime = 0.5;
 float filteredOmega = 0;
 
 long lastPrint = 0;
+
+float prevPow = 0;
+float prevW = 0;
+unsigned long prevPowTime = 0;
+void resetControl() {
+  prevPow = 0;
+  prevW = 0;
+  prevPowTime = micros();
+}
 
 bool loopControl() {
   float distRem = targetDist() - axialDist();
@@ -46,17 +55,6 @@ bool loopControl() {
     atMax = true;
   }
 
-  // Accel curve
-  float prog = min(getTime()/accelTime, 1.0);
-  pow *= prog;
-  if (getTime() < accelTime) {
-    LEDWrite(prog, prog, 0); // Accel phase: yellow
-  } else if (atMax) {
-    LEDWrite(1, 0, 1); // Full speed phase: pink
-  } else {
-    LEDWrite(0, 0, 1); // Decel phase: blue
-  }
-
   // Calculate target angle
   float ang = heading();
 
@@ -65,10 +63,32 @@ bool loopControl() {
   filteredOmega = filteredOmega * 0.3 + angVel() * 0.7; // Low-pass filter the ang. vel.
   w += filteredOmega * D;
 
+  float prog = min(getTime()/accelTime, 1.0);
   if (lateralDist() >= 0) {
     w += sqrt(P_lateral*lateralDist())*prog;
   } else {
     w -= sqrt(P_lateral*-lateralDist())*prog;
+  }
+
+  // Accel curve (through torque limiting) - essentially limits rate of change of power
+  float maxDelta = ((float)(micros() - prevPowTime)/1000000.0f)/accelTime;
+  if (distRem > 0.1) { // Only accel limit if >10cm away, need ALL the control authority at the end
+    if (fabs(pow - prevPow) > maxDelta) {
+      pow = sgn(pow - prevPow)*maxDelta + prevPow;
+    }
+    if (fabs(w - prevW) > maxDelta) {
+      w = sgn(w - prevW)*maxDelta + prevW;
+    }
+    prevPowTime = micros();
+    prevPow = pow;
+    prevW = w;
+  }
+  if (getTime() < accelTime) {
+    LEDWrite(prog, prog, 0); // Accel phase: yellow
+  } else if (atMax) {
+    LEDWrite(1, 0, 1); // Full speed phase: pink
+  } else {
+    LEDWrite(0, 0, 1); // Decel phase: blue
   }
 
   // Apply W
@@ -112,7 +132,11 @@ bool loopControl() {
   }*/
 
   // Loop timing - goal: 1khz
-  delayMicroseconds(870);
+  delayMicroseconds(860);
 
   return false;
+}
+
+inline float sgn(float x) {
+  return x > 0 ? 1.0f : -1.0f;
 }
