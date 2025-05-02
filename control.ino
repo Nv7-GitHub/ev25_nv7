@@ -1,8 +1,8 @@
 const float P_forward = 1.25;
 const float P_difference = 2;
-const float D = 0.1;
-const float D_forward = 0.17;
-const float P_lateral = 0.1;
+const float D = 0.09;
+const float D_forward = 0.16;
+const float P_lateral = 2;
 const float maxSpeed = 1.0;
 const float accelTime = 0.5;
 float filteredOmega = 0;
@@ -58,17 +58,10 @@ bool loopControl() {
   // Calculate target angle
   float ang = heading();
 
-  // Calculate W (angular control output)
-  float w = ang * P_difference;
+  // Calculate W (angular control output) + lateral error
+  float w = (ang + lateralDist()*P_lateral) * P_difference;
   filteredOmega = filteredOmega * 0.3 + angVel() * 0.7; // Low-pass filter the ang. vel.
   w += filteredOmega * D;
-
-  float prog = min(getTime()/accelTime, 1.0);
-  if (lateralDist() >= 0) {
-    w += sqrt(P_lateral*lateralDist())*prog;
-  } else {
-    w -= sqrt(P_lateral*-lateralDist())*prog;
-  }
 
   // Accel curve (through torque limiting) - essentially limits rate of change of power
   float maxDelta = ((float)(micros() - prevPowTime)/1000000.0f)/accelTime;
@@ -84,6 +77,7 @@ bool loopControl() {
     prevW = w;
   }
   if (getTime() < accelTime) {
+    float prog = getTime()/accelTime;
     LEDWrite(prog, prog, 0); // Accel phase: yellow
   } else if (atMax) {
     LEDWrite(1, 0, 1); // Full speed phase: pink
@@ -132,7 +126,7 @@ bool loopControl() {
   }*/
 
   // Loop timing - goal: 1khz
-  delayMicroseconds(860);
+  delayMicroseconds(870);
 
   return false;
 }

@@ -1,24 +1,20 @@
 // CONFIGURE THESE
-const float distTarget = 10.0 - 0.034; // 0.034 is distance from MP to center
+const float distTarget = 7.0;
 float theta = 0;
-const float initialDistAxial = 0; // If it goes too far, increase this
-const float initialDistLateral = -0.055; // If it goes left normally, make this positive
+const float initialDistAxial = -0.005 + 0.034; // If it goes too far, increase this, 0.034 is distance from MP to center
+const float initialDistLateral = 0.05; // If it goes left normally, make this positive
 
 /* Calibration
 // ALWAYS TAKE THE ERROR, DIVIDE BY TWO, AND ROUND DOWN
 
 7m: 
-initialDistAxial: 0.00
-initialDistLateral (home): 0.170
+initialDistAxial: -0.005
+initialDistLateral (home): 0.05
 initialDistLateral (comp): 0.00
 
-8.5m:
-initialDistAxial: 0
-initialDistLateral: 0.2
-
 10m:
-initialDistAxial: 0.01
-initialDistLateral: 0.29
+initialDistAxial: 0.005
+initialDistLateral (home): 0.095
 initialDistLateral (comp): 0.06
 */
 
@@ -100,7 +96,9 @@ float axialDist() {
 
 float lateralDist() {
   // Apply initialDistLateral over the course of the first 25% of the run, to avoid slipping due to a sharp turn
-  return min((distAxial/distTarget)*4.0f, 1)*initialDistLateral + distLateral;
+  //return min((distAxial/distTarget)*2.0f, 1)*initialDistLateral + distLateral;
+  float prog = distAxial/distTarget;
+  return distLateral + initialDistLateral*(-exp(-prog*4) + 1.0f);
 }
 
 float angVel() {
